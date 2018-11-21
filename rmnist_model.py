@@ -5,7 +5,7 @@ import numpy as np
 import math
 import scipy.misc
 import os
-import make_gif
+# import make_gif
 
 class rotate_mnist(object):
 
@@ -17,9 +17,23 @@ class rotate_mnist(object):
                      images_path = x_path, 
                      labels_path = y_path)
 
+    	self.X = np.reshape(self.X,(-1,28,28,1)).astype(np.float)
+
+    	angle = np.tile(np.arange(12),len(self.X))*math.pi/12.
+    	index = np.arange(len(self.X)).repeat(12)
+    	seed = 547
+    	np.random.seed(seed)
+    	np.random.shuffle(angle)
+    	np.random.seed(seed)
+    	np.random.shuffle(index)
+    	self.angle = angle
+    	self.index = index
+
+
+
     def show_example(self):
     	img = np.reshape(self.X[0],(28,28))
-    	print (len(img.shape))
+    	print (img.shape)
     	imgplot = plt.imshow(img,cmap = 'gray', interpolation = 'bicubic')
     	plt.show()
     
@@ -69,6 +83,44 @@ class rotate_mnist(object):
     		# imgplot = plt.imshow(im,cmap = 'gray', interpolation = 'bicubic')
     		# plt.show()	
     		scipy.misc.imsave(os.path.join(path,'%s.jpg' % i), im)
+
+    def test(self):
+    	print(self.angle[:100])
+    	print(self.index[:100])
+
+    def getNext_batch(self,iter_num=0, batch_size=64):
+
+    	ro_num = len(self.index) / batch_size - 1
+    	
+    	if iter_num % ro_num == 0:
+        
+            length = len(self.index)
+            perm = np.arange(length)
+            np.random.shuffle(perm)
+            self.angle = np.array(self.angle)
+            self.angle = self.angle[perm]
+            self.index = np.array(self.index)
+            self.index = self.index[perm]
+
+    	angle = self.angle[int(iter_num % ro_num) * batch_size: int(iter_num%ro_num + 1) * batch_size]
+    	index = self.index[int(iter_num % ro_num) * batch_size: int(iter_num%ro_num + 1) * batch_size]
+    	X = np.zeros((batch_size,28,28,1)).astype(np.float)
+    	y = np.zeros(batch_size)
+    	for i in range(batch_size):
+        	X[i] = self.rotate(self.X[index[i]],angle[i])
+        	y[i] = self.y[index[i]]
+        
+    	return X,angle,y
+
+    def batch_test(self,iter):
+    	X,a,y = self.getNext_batch(iter_num=iter)
+
+    	for i in range(len(X)):
+
+    		im = np.reshape(X[i],(28,28))	
+    		print("angle: %s  lable: %s " % (np.round(a[i]/math.pi*12.),y[i]))
+    		imgplot = plt.imshow(im,cmap = 'gray', interpolation = 'bicubic')
+    		plt.show()
 
 
 
